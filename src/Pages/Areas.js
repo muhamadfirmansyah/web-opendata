@@ -1,12 +1,20 @@
 import { useEffect, useState } from "react"
 import Header from "../Components/Header"
+import { useAuthState } from "../Context"
 
 const Areas = () => {
+
+    const { host, token } = useAuthState()
+    const headers = {
+        "Authorization": `Bearer ${token}`,
+        "Content-Type": "application/json",
+    }
 
     const [areas, setAreas] = useState([])
     const [levels, setLevels] = useState([])
     const [isCreate, setIsCreate] = useState(false)
     const [form, setForm] = useState({
+        id: null,
         name: "",
         level_id: "",
         code: "",
@@ -14,14 +22,9 @@ const Areas = () => {
         longitude: ""
     })
 
-    const token = JSON.parse(localStorage.getItem('currentUser')).access_token
-
     const getAreas = async () => {
-        const response = await fetch("http://localhost:8000/api/areas", {
-            headers: {
-                "Authorization": `Bearer ${token}`,
-                "Content-Type": "application/json",
-            }
+        const response = await fetch(`${host}/areas`, {
+            headers: headers
         })
 
         const data = await response.json()
@@ -30,11 +33,8 @@ const Areas = () => {
     }
 
     const getAttributes = async () => {
-        const responseLevels = await fetch("http://localhost:8000/api/levels", {
-            headers: {
-                "Authorization": `Bearer ${token}`,
-                "Content-Type": "application/json",
-            }
+        const responseLevels = await fetch(`${host}/levels`, {
+            headers: headers
         })
 
         const dataLevels = await responseLevels.json()
@@ -52,29 +52,79 @@ const Areas = () => {
     const handleSubmit = async (e) => {
         e.preventDefault()
 
-        const response = await fetch("http://localhost:8000/api/areas", {
-            method: "POST",
-            headers: {
-                "Authorization": `Bearer ${token}`,
-                "Content-Type": "application/json",
-            },
-            body: JSON.stringify(form)
-        })
+        if (form.id) {
+            const response = await fetch(`${host}/areas/${form.id}`, {
+                method: "PUT",
+                headers: headers,
+                body: JSON.stringify(form)
+            })
+    
+            if (response.status === 200) {
+                handleReset()
+                getAreas()
+                setIsCreate(false)
+            }
+        } else {
+            const response = await fetch(`${host}/areas`, {
+                method: "POST",
+                headers: headers,
+                body: JSON.stringify(form)
+            })
+    
+            if (response.status === 201) {
+                handleReset()
+                getAreas()
+                setIsCreate(false)
+            }
+        }
+    }
 
+    const handleEdit = async (id) => {
+        const response = await fetch(`${host}/areas/${id}`, {
+            method: "GET",
+            headers: headers,
+        })
         const data = await response.json()
 
-        if (!data.error) {
+        if (response.status === 200) {
             setForm({
-                name: "",
-                level_id: "",
-                code: "",
-                latitude: "",
-                longitude: ""
+                id: data.id,
+                name: data.name,
+                level_id: data.level_id,
+                code: data.code,
+                latitude: data.latitude,
+                longitude: data.longitude,
             })
 
-            getAreas()
-            setIsCreate(false)
+            setIsCreate(true)
         }
+    }
+
+    const handleDelete = async (id) => {
+        const response = await fetch(`${host}/areas/${id}`, {
+            method: "DELETE",
+            headers: headers,
+        })
+
+        if (response.status === 200) {
+            getAreas()
+        }
+    }
+
+    const handleReset = () => {
+        setForm({
+            id: null,
+            name: "",
+            level_id: "",
+            code: "",
+            latitude: "",
+            longitude: ""
+        })
+    }
+
+    const handleForm = () => {
+        handleReset()
+        setIsCreate(!isCreate)
     }
 
     return (
@@ -94,11 +144,11 @@ const Areas = () => {
                             <div className="container max-w-4xl mx-auto mb-4 font-bold flex items-center justify-between">
                                 <h4 className="text-2xl">Daftar Area</h4>
                                 <div>
-                                    <button className="bg-purple-800 text-white py-2 px-4 rounded-lg shadow hover:bg-purple-900" onClick={() => setIsCreate(!isCreate)}>{!isCreate ? "Tambah" : "Tutup"}</button>
+                                    <button className="bg-purple-800 text-white py-2 px-4 rounded-lg shadow hover:bg-purple-900" onClick={handleForm}>{!isCreate ? "Tambah" : "Tutup"}</button>
                                 </div>
                             </div>
 
-                            {isCreate && (
+                            {isCreate ? (
                                 <div className="container mx-auto rounded-lg shadow p-4 max-w-4xl mb-4 bg-white">
                                     <form className="container" onSubmit={handleSubmit}>
                                         <div className="space-y-6 bg-white">
@@ -112,7 +162,7 @@ const Areas = () => {
                                                             className=" rounded-lg border-transparent flex-1 appearance-none border border-gray-300 w-full py-2 px-4 bg-white text-gray-700 placeholder-gray-400 shadow-sm text-base focus:outline-none focus:ring-2 focus:ring-purple-600 focus:border-transparent"
                                                             placeholder="Name"
                                                             value={form.name}
-                                                            onChange={(e) => setForm({ ...form, name: e.target.value })} />
+                                                            onChange={(e) => setForm({ ...form, name: e.target.value })} required />
                                                     </div>
                                                 </div>
                                             </div>
@@ -149,7 +199,7 @@ const Areas = () => {
                                                             className=" rounded-lg border-transparent flex-1 appearance-none border border-gray-300 w-full py-2 px-4 bg-white text-gray-700 placeholder-gray-400 shadow-sm text-base focus:outline-none focus:ring-2 focus:ring-purple-600 focus:border-transparent"
                                                             placeholder="code"
                                                             value={form.code}
-                                                            onChange={(e) => setForm({ ...form, code: e.target.value })} />
+                                                            onChange={(e) => setForm({ ...form, code: e.target.value })} required />
                                                     </div>
                                                 </div>
                                             </div>
@@ -165,7 +215,7 @@ const Areas = () => {
                                                                 className=" rounded-lg border-transparent flex-1 appearance-none border border-gray-300 w-full py-2 px-4 bg-white text-gray-700 placeholder-gray-400 shadow-sm text-base focus:outline-none focus:ring-2 focus:ring-purple-600 focus:border-transparent"
                                                                 placeholder="Latitude"
                                                                 value={form.latitude}
-                                                                onChange={(e) => setForm({ ...form, latitude: e.target.value })} />
+                                                                onChange={(e) => setForm({ ...form, latitude: e.target.value })} required />
                                                         </div>
                                                     </div>
                                                     <div>
@@ -174,7 +224,7 @@ const Areas = () => {
                                                                 className=" rounded-lg border-transparent flex-1 appearance-none border border-gray-300 w-full py-2 px-4 bg-white text-gray-700 placeholder-gray-400 shadow-sm text-base focus:outline-none focus:ring-2 focus:ring-purple-600 focus:border-transparent"
                                                                 placeholder="Longitude"
                                                                 value={form.longitude}
-                                                                onChange={(e) => setForm({ ...form, longitude: e.target.value })} />
+                                                                onChange={(e) => setForm({ ...form, longitude: e.target.value })} required />
                                                         </div>
                                                     </div>
                                                 </div>
@@ -189,66 +239,83 @@ const Areas = () => {
                                         </div>
                                     </form>
                                 </div>
-                            )}
-
-                            <div className="container mx-auto rounded-lg shadow p-4 max-w-4xl bg-white">
-                                <table className="min-w-full leading-normal">
-                                    <thead>
-                                        <tr>
-                                            <th scope="col" className="px-5 py-3 bg-white  border-b border-gray-200 text-gray-800  text-left text-sm font-normal">
-                                                ID
-                                            </th>
-                                            <th scope="col" className="px-5 py-3 bg-white  border-b border-gray-200 text-gray-800  text-left text-sm font-normal">
-                                                Name
-                                            </th>
-                                            <th scope="col" className="px-5 py-3 bg-white  border-b border-gray-200 text-gray-800  text-left text-sm font-normal">
-                                                Level
-                                            </th>
-                                            <th scope="col" className="px-5 py-3 bg-white  border-b border-gray-200 text-gray-800  text-left text-sm font-normal">
-                                                Latitude
-                                            </th>
-                                            <th scope="col" className="px-5 py-3 bg-white  border-b border-gray-200 text-gray-800  text-left text-sm font-normal">
-                                                Longitude
-                                            </th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {areas.map(level => (
-                                            <tr key={level.id}>
-                                                <td className="px-5 py-5 border-b border-gray-200 bg-white text-sm">
-                                                    <p className="text-gray-900 whitespace-no-wrap">
-                                                        {level.id}
-                                                    </p>
-                                                </td>
-                                                <td className="px-5 py-5 border-b border-gray-200 bg-white text-sm">
-                                                    <span className="relative inline-block px-3 py-1 font-semibold text-green-900 leading-tight">
-                                                        <span aria-hidden="true" className="absolute inset-0 bg-green-200 opacity-50 rounded-full">
-                                                        </span>
-                                                        <span className="relative">
-                                                            {level.name}
-                                                        </span>
-                                                    </span>
-                                                </td>
-                                                <td className="px-5 py-5 border-b border-gray-200 bg-white text-sm">
-                                                    <p className="text-gray-900 whitespace-no-wrap">
-                                                        {level.level.name}
-                                                    </p>
-                                                </td>
-                                                <td className="px-5 py-5 border-b border-gray-200 bg-white text-sm">
-                                                    <p className="text-gray-900 whitespace-no-wrap">
-                                                        {level.latitude}
-                                                    </p>
-                                                </td>
-                                                <td className="px-5 py-5 border-b border-gray-200 bg-white text-sm">
-                                                    <p className="text-gray-900 whitespace-no-wrap">
-                                                        {level.longitude}
-                                                    </p>
-                                                </td>
+                            ) : (
+                                <div className="container mx-auto rounded-lg shadow p-4 max-w-4xl bg-white overflow-auto">
+                                    <table className="min-w-full leading-normal">
+                                        <thead>
+                                            <tr>
+                                                <th scope="col" className="px-5 py-3 bg-white  border-b border-gray-200 text-gray-800  text-left text-sm font-normal">
+                                                    ID
+                                                </th>
+                                                <th scope="col" className="px-5 py-3 bg-white  border-b border-gray-200 text-gray-800  text-left text-sm font-normal">
+                                                    Name
+                                                </th>
+                                                <th scope="col" className="px-5 py-3 bg-white  border-b border-gray-200 text-gray-800  text-left text-sm font-normal">
+                                                    Level
+                                                </th>
+                                                <th scope="col" className="px-5 py-3 bg-white  border-b border-gray-200 text-gray-800  text-left text-sm font-normal">
+                                                    Kode Kemendagri
+                                                </th>
+                                                <th scope="col" className="px-5 py-3 bg-white  border-b border-gray-200 text-gray-800  text-left text-sm font-normal">
+                                                    Latitude
+                                                </th>
+                                                <th scope="col" className="px-5 py-3 bg-white  border-b border-gray-200 text-gray-800  text-left text-sm font-normal">
+                                                    Longitude
+                                                </th>
+                                                <th scope="col" className="px-5 py-3 bg-white  border-b border-gray-200 text-gray-800  text-left text-sm font-normal">
+                                                    Actions
+                                                </th>
                                             </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
+                                        </thead>
+                                        <tbody>
+                                            {areas.map(level => (
+                                                <tr key={level.id}>
+                                                    <td className="px-5 py-5 border-b border-gray-200 bg-white text-sm">
+                                                        <p className="text-gray-900 whitespace-no-wrap">
+                                                            {level.id}
+                                                        </p>
+                                                    </td>
+                                                    <td className="px-5 py-5 border-b border-gray-200 bg-white text-sm">
+                                                        <p className="text-purple-900 whitespace-no-wrap font-bold">
+                                                            {level.name}
+                                                        </p>
+                                                    </td>
+                                                    <td className="px-5 py-5 border-b border-gray-200 bg-white text-sm">
+                                                        <p className="text-gray-900 whitespace-no-wrap">
+                                                            {level.level.name}
+                                                        </p>
+                                                    </td>
+                                                    <td className="px-5 py-5 border-b border-gray-200 bg-white text-sm">
+                                                        <p className="text-gray-900 whitespace-no-wrap">
+                                                            {level.code}
+                                                        </p>
+                                                    </td>
+                                                    <td className="px-5 py-5 border-b border-gray-200 bg-white text-sm">
+                                                        <p className="text-gray-900 whitespace-no-wrap">
+                                                            {level.latitude}
+                                                        </p>
+                                                    </td>
+                                                    <td className="px-5 py-5 border-b border-gray-200 bg-white text-sm">
+                                                        <p className="text-gray-900 whitespace-no-wrap">
+                                                            {level.longitude}
+                                                        </p>
+                                                    </td>
+                                                    <td className="px-5 py-5 border-b border-gray-200 bg-white text-sm">
+                                                        <div className="flex gap-2">
+                                                            <button className="px-3 py-2 rounded-lg shadow text-white bg-green-400 hover:bg-green-500" onClick={() => handleEdit(level.id)}>
+                                                                Edit
+                                                            </button>
+                                                            <button className="px-3 py-2 rounded-lg shadow text-white bg-red-400 hover:bg-red-500" onClick={() => handleDelete(level.id)}>
+                                                                Delete
+                                                            </button>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            )}
 
                         </div>
                         {/* /End replace */}

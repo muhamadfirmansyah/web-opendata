@@ -1,4 +1,4 @@
-const ROOT_URL = "http://localhost:8000"
+const ROOT_URL = "https://apiopendata.herokuapp.com"
 
 export const loginUser = async (dispatch, loginPayload) => {
     const requestOptions = {
@@ -22,7 +22,7 @@ export const loginUser = async (dispatch, loginPayload) => {
         dispatch({ type: "LOGIN_ERROR", error: data.message })
         return
     } catch (error) {
-        dispatch({ type: "LOGIN_ERROR", error: error })
+        dispatch({ type: "LOGIN_ERROR", error: error.message })
     }
 }
 

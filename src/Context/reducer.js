@@ -5,7 +5,8 @@ let token = localStorage.getItem("currentUser")
 export const initialState = {
     token: "" || token,
     loading: false,
-    errorMessage: null
+    errorMessage: null,
+    host: "https://apiopendata.herokuapp.com/api"
 }
 
 export const AuthReducer = (initialState, action) => {
